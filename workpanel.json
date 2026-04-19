@@ -1,0 +1,867 @@
+{
+  "name": "workpanel",
+  "version": "1.0.0",
+  "description": "Workpanel PaaS Platform - Self-hosted deployment platform with all capabilities",
+  "platform": {
+    "name": "Workpanel",
+    "type": "PaaS Platform",
+    "description": "Self-hosted PaaS platform with deployment pipeline, GitHub integration, A/B testing, health monitoring, and live previews"
+  },
+  "services": {
+    "deploymentPipeline": {
+      "name": "Deployment Pipeline",
+      "description": "GitHub webhook triggered automated build, deploy, and verify workflow",
+      "features": [
+        "Automated build process",
+        "Container-based deployment",
+        "Status tracking at every stage",
+        "Queue-based processing with BullMQ",
+        "Real-time progress updates"
+      ],
+      "stages": [
+        {
+          "key": "queued",
+          "label": "Sırada",
+          "description": "Deployment queued for processing"
+        },
+        {
+          "key": "building",
+          "label": "Build Ediliyor",
+          "description": "Building Docker image from repository"
+        },
+        {
+          "key": "deploying",
+          "label": "Dağıtılıyor",
+          "description": "Deploying container to Docker host"
+        },
+        {
+          "key": "verifying",
+          "label": "Doğrulanıyor",
+          "description": "Verifying deployment health"
+        },
+        {
+          "key": "complete",
+          "label": "Tamamlandı",
+          "description": "Deployment complete and running"
+        }
+      ],
+      "statuses": [
+        "pending",
+        "building",
+        "deploying",
+        "running",
+        "failed",
+        "rolled_back",
+        "stopped"
+      ]
+    },
+    "githubIntegration": {
+      "name": "GitHub Integration",
+      "description": "OAuth-based repository connection with webhook automation",
+      "features": [
+        "OAuth-based authentication",
+        "Repository connection",
+        "Webhook automation for push events",
+        "Branch selection and management",
+        "Automatic deployment triggers on push"
+      ],
+      "endpoints": {
+        "oauth": {
+          "start": "GET /api/github/oauth/start?projectId={projectId}",
+          "callback": "GET /api/github/oauth/callback?code={code}&state={state}"
+        },
+        "repos": {
+          "list": "GET /api/github/repos?projectId={projectId}&accessToken={token}",
+          "branches": "GET /api/github/repos/:owner/:repo/branches?projectId={projectId}&accessToken={token}",
+          "connect": "POST /api/github/connect",
+          "disconnect": "POST /api/github/disconnect"
+        },
+        "commits": "GET /api/github/commits/:projectId"
+      }
+    },
+    "versionManagement": {
+      "name": "Version Management",
+      "description": "Automatic versioning on each deployment with full history tracking",
+      "features": [
+        "Automatic version numbering",
+        "Full deployment history",
+        "Rollback to any previous version",
+        "Version comparison",
+        "Build log retention"
+      ],
+      "versionFormat": "v{versionNumber}",
+      "rollback": {
+        "endpoint": "POST /api/deployments/:id/rollback",
+        "parameter": "version (e.g., v1, v2)",
+        "supports": "full"
+      }
+    },
+    "abTesting": {
+      "name": "A/B Testing",
+      "description": "Split traffic between versions, track metrics per variant, and declare winners",
+      "features": [
+        "Traffic split configuration",
+        "Segment-based routing",
+        "Real-time metrics per variant",
+        "Winner declaration",
+        "Test history"
+      ],
+      "trafficSplit": {
+        "validation": "trafficSplitA + trafficSplitB must equal 100",
+        "supported": [0, 100]
+      },
+      "statuses": ["active", "paused", "completed"],
+      "endpoints": {
+        "list": "GET /api/ab-tests/:projectId",
+        "active": "GET /api/ab-tests/:projectId/active",
+        "create": "POST /api/ab-tests",
+        "update": "PUT /api/ab-tests/:id/split",
+        "pause": "POST /api/ab-tests/:id/pause",
+        "resume": "POST /api/ab-tests/:id/resume",
+        "complete": "POST /api/ab-tests/:id/complete",
+        "metrics": "GET /api/ab-tests/:id/metrics"
+      }
+    },
+    "healthMonitoring": {
+      "name": "Health Monitoring",
+      "description": "Continuous monitoring of CPU, memory, response time, and error rate",
+      "metrics": [
+        {
+          "key": "cpuPercent",
+          "label": "CPU Usage",
+          "unit": "percent"
+        },
+        {
+          "key": "memoryMB",
+          "label": "Memory Usage",
+          "unit": "MB"
+        },
+        {
+          "key": "responseTimeMs",
+          "label": "Response Time",
+          "unit": "ms"
+        },
+        {
+          "key": "errorRate",
+          "label": "Error Rate",
+          "unit": "percent"
+        },
+        {
+          "key": "uptime",
+          "label": "Uptime",
+          "unit": "seconds"
+        },
+        {
+          "key": "requestCount",
+          "label": "Request Count",
+          "unit": "count"
+        }
+      ],
+      "alerting": {
+        "webhook": true,
+        "configurable": true,
+        "channels": ["email", "slack", "push"]
+      }
+    },
+    "livePreview": {
+      "name": "Live Preview",
+      "description": "Embed running deployments in iframe with responsive viewport controls",
+      "features": [
+        "Iframe embedding",
+        "Responsive viewport controls",
+        "Fullscreen mode",
+        "Device simulation",
+        "Real-time updates"
+      ]
+    },
+    "customDomains": {
+      "name": "Custom Domains",
+      "description": "DNS management and automatic SSL certificate provisioning",
+      "features": [
+        "Custom domain registration",
+        "DNS TXT verification",
+        "CNAME configuration",
+        "File-based verification",
+        "Automatic SSL via Let's Encrypt",
+        "ACME DNS challenge support"
+      ],
+      "endpoints": {
+        "list": "GET /api/domains/project/:projectId",
+        "create": "POST /api/domains",
+        "delete": "DELETE /api/domains/:id",
+        "verify": "POST /api/domains/:id/verify"
+      },
+      "verificationTypes": [
+        "TXT Record",
+        "CNAME Record",
+        "File-based"
+      ],
+      "sslStatuses": ["pending", "active", "expired", "error"]
+    },
+    "environmentVariables": {
+      "name": "Environment Variables",
+      "description": "Secret management with presets and import/export capabilities",
+      "features": [
+        "Secret management",
+        "Scoped per project",
+        "Scoped per deployment",
+        "Import/export",
+        "Secure storage"
+      ],
+      "scopes": ["project", "runtime", "build"],
+      "endpoints": {
+        "get": "GET /api/env-vars/:projectId",
+        "update": "PUT /api/env-vars/:projectId"
+      }
+    },
+    "serviceStatus": {
+      "name": "Service Status",
+      "description": "Customer-facing status page with uptime tracking and incident reporting",
+      "features": [
+        "Uptime tracking",
+        "Incident reporting",
+        "Historical data",
+        "Status indicators",
+        "Public status page"
+      ],
+      "infrastructure": {
+        "redis": {
+          "monitor": true,
+          "metrics": ["cpu", "memory", "disk", "connections", "queryCount"]
+        },
+        "postgres": {
+          "monitor": true,
+          "metrics": ["cpu", "memory", "disk", "connections", "queryCount"]
+        }
+      }
+    },
+    "containerManagement": {
+      "name": "Container Management",
+      "description": "Docker container lifecycle operations via Dockerode",
+      "features": [
+        "Container listing",
+        "Container start/stop",
+        "Log retrieval",
+        "Stats monitoring",
+        "Health checks"
+      ],
+      "endpoints": {
+        "list": "GET /api/containers/:projectId",
+        "stop": "POST /api/containers/:id/stop",
+        "start": "POST /api/containers/:id/start",
+        "logs": "GET /api/containers/:id/logs",
+        "stats": "GET /api/containers/:id/stats"
+      },
+      "statuses": ["running", "stopped", "paused", "restarting", "exited"]
+    },
+    "subdomains": {
+      "name": "Subdomains",
+      "description": "Automatic subdomain provisioning on base domain",
+      "features": [
+        "Auto-provisioned subdomains",
+        "Custom subdomain assignment",
+        "Base domain configuration",
+        "SSL auto-provisioning"
+      ]
+    },
+    "projects": {
+      "name": "Project Management",
+      "description": "Project CRUD operations, customer management, and phase tracking",
+      "features": [
+        "Project CRUD",
+        "Customer association",
+        "Phase tracking (4 phases)",
+        "Task management",
+        "Revision tracking",
+        "File uploads",
+        "Milestone tracking",
+        "AI-powered milestones"
+      ],
+      "phases": [
+        {
+          "key": "Planlama",
+          "label": "Planlama",
+          "order": 0
+        },
+        {
+          "key": "Geliştirme",
+          "label": "Geliştirme",
+          "order": 1
+        },
+        {
+          "key": "Test",
+          "label": "Test",
+          "order": 2
+        },
+        {
+          "key": "Teslimat",
+          "label": "Teslimat",
+          "order": 3
+        }
+      ],
+      "projectStatuses": ["active", "paused", "completed"]
+    },
+    "notifications": {
+      "name": "Notifications",
+      "description": "Multi-channel notification system with preference management",
+      "features": [
+        "Email notifications",
+        "Slack integration",
+        "Push notifications",
+        "Preference management",
+        "Severity filtering"
+      ],
+      "channels": ["email", "slack", "push"],
+      "severities": ["info", "warning", "critical"]
+    },
+    "auth": {
+      "name": "Authentication",
+      "description": "Operator authentication and session management",
+      "features": [
+        "JWT-based authentication",
+        "Session management",
+        "Rate limiting",
+        "Access code attempts"
+      ],
+      "endpoints": {
+        "login": "POST /api/auth/login",
+        "logout": "POST /api/auth/logout",
+        "session": "GET /api/auth/session"
+      }
+    },
+    "health": {
+      "name": "Health Check",
+      "description": "Server health and dependency status checks",
+      "endpoints": {
+        "health": "GET /health",
+        "queue": "GET /api/queue"
+      }
+    }
+  },
+  "api": {
+    "baseUrl": "/api",
+    "endpoints": {
+      "auth": {
+        "login": "POST /api/auth/login",
+        "logout": "POST /api/auth/logout",
+        "session": "GET /api/auth/session"
+      },
+      "deployments": {
+        "create": "POST /api/deployments",
+        "list": "GET /api/deployments/project/:projectId",
+        "get": "GET /api/deployments/:id",
+        "status": "GET /api/deployments/:id/status",
+        "versions": "GET /api/deployments/:id/versions",
+        "rollback": "POST /api/deployments/:id/rollback"
+      },
+      "containers": {
+        "list": "GET /api/containers/:projectId",
+        "stop": "POST /api/containers/:id/stop",
+        "start": "POST /api/containers/:id/start",
+        "logs": "GET /api/containers/:id/logs",
+        "stats": "GET /api/containers/:id/stats"
+      },
+      "domains": {
+        "list": "GET /api/domains/project/:projectId",
+        "create": "POST /api/domains",
+        "delete": "DELETE /api/domains/:id",
+        "verify": "POST /api/domains/:id/verify"
+      },
+      "abTests": {
+        "list": "GET /api/ab-tests/:projectId",
+        "active": "GET /api/ab-tests/:projectId/active",
+        "create": "POST /api/ab-tests",
+        "update": "PUT /api/ab-tests/:id/split",
+        "pause": "POST /api/ab-tests/:id/pause",
+        "resume": "POST /api/ab-tests/:id/resume",
+        "complete": "POST /api/ab-tests/:id/complete",
+        "metrics": "GET /api/ab-tests/:id/metrics"
+      },
+      "envVars": {
+        "get": "GET /api/env-vars/:projectId",
+        "update": "PUT /api/env-vars/:projectId"
+      },
+      "github": {
+        "oauthStart": "GET /api/github/oauth/start",
+        "oauthCallback": "GET /api/github/oauth/callback",
+        "repos": "GET /api/github/repos",
+        "branches": "GET /api/github/repos/:owner/:repo/branches",
+        "connect": "POST /api/github/connect",
+        "disconnect": "POST /api/github/disconnect",
+        "commits": "GET /api/github/commits/:projectId"
+      },
+      "health": {
+        "health": "GET /health",
+        "queue": "GET /api/queue"
+      },
+      "webhook": {
+        "github": "POST /webhook/github"
+      }
+    }
+  },
+  "database": {
+    "provider": "Convex",
+    "tables": [
+      {
+        "name": "customers",
+        "description": "Customer accounts",
+        "fields": ["name", "email", "phone", "createdAt"]
+      },
+      {
+        "name": "projects",
+        "description": "Project instances",
+        "fields": [
+          "customerId",
+          "title",
+          "description",
+          "status",
+          "progress",
+          "accessCode",
+          "revisionLimit",
+          "activeRevisions",
+          "technologies",
+          "envVars",
+          "createdAt",
+          "updatedAt",
+          "subdomain"
+        ],
+        "indexes": ["by_accessCode", "by_customerId", "by_status", "by_subdomain"]
+      },
+      {
+        "name": "phases",
+        "description": "Project phases (Planlama, Geliştirme, Test, Teslimat)",
+        "fields": ["projectId", "name", "order", "status", "progress"],
+        "indexes": ["by_projectId", "by_order"]
+      },
+      {
+        "name": "tasks",
+        "description": "Tasks within phases",
+        "fields": ["phaseId", "title", "progress", "status"],
+        "indexes": ["by_phaseId"]
+      },
+      {
+        "name": "revisions",
+        "description": "Project revisions",
+        "fields": ["projectId", "title", "description", "status", "createdAt", "completedAt"],
+        "indexes": ["by_projectId", "by_status"]
+      },
+      {
+        "name": "files",
+        "description": "Project documents and uploads",
+        "fields": ["projectId", "name", "storageId", "size", "type", "uploadedAt"],
+        "indexes": ["by_projectId"]
+      },
+      {
+        "name": "deployments",
+        "description": "Deployment records",
+        "fields": [
+          "projectId",
+          "githubRepoUrl",
+          "branch",
+          "status",
+          "stage",
+          "progress",
+          "message",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ],
+        "indexes": ["by_projectId", "by_status"]
+      },
+      {
+        "name": "deployment_versions",
+        "description": "Deployment version history",
+        "fields": [
+          "deploymentId",
+          "version",
+          "commitHash",
+          "commitMessage",
+          "imageUrl",
+          "containerId",
+          "previewUrl",
+          "status",
+          "deployedAt",
+          "rolledBack",
+          "buildLog",
+          "buildDuration",
+          "envVars"
+        ],
+        "indexes": ["by_deploymentId", "by_status"]
+      },
+      {
+        "name": "env_variables",
+        "description": "Project environment variables",
+        "fields": ["projectId", "key", "value", "scope", "isSecret", "createdAt", "updatedAt"],
+        "indexes": ["by_projectId", "by_projectId_key"]
+      },
+      {
+        "name": "github_integrations",
+        "description": "GitHub repository connections",
+        "fields": [
+          "projectId",
+          "githubRepoFullName",
+          "githubRepoId",
+          "branch",
+          "webhookSecret",
+          "accessToken",
+          "githubUsername",
+          "webhookId",
+          "webhookStatus",
+          "lastWebhookSyncAt",
+          "connectedAt"
+        ],
+        "indexes": ["by_projectId"]
+      },
+      {
+        "name": "ab_tests",
+        "description": "A/B test configurations",
+        "fields": [
+          "projectId",
+          "versionA",
+          "versionB",
+          "trafficSplitA",
+          "trafficSplitB",
+          "status",
+          "startedAt",
+          "endedAt",
+          "segmentRules"
+        ],
+        "indexes": ["by_projectId", "by_status"]
+      },
+      {
+        "name": "ab_test_metrics",
+        "description": "A/B test metrics",
+        "fields": ["abTestId", "projectId", "version", "metricType", "value", "createdAt"],
+        "indexes": ["by_abTestId", "by_projectId", "by_createdAt"]
+      },
+      {
+        "name": "health_metrics",
+        "description": "Deployment health metrics",
+        "fields": [
+          "projectId",
+          "deploymentVersionId",
+          "timestamp",
+          "cpuPercent",
+          "memoryMB",
+          "responseTimeMs",
+          "statusCode",
+          "uptime",
+          "errorRate",
+          "requestCount"
+        ],
+        "indexes": ["by_projectId", "by_deploymentVersionId", "by_timestamp"]
+      },
+      {
+        "name": "infrastructure_metrics",
+        "description": "Redis/PostgreSQL monitoring",
+        "fields": [
+          "projectId",
+          "serviceName",
+          "timestamp",
+          "status",
+          "cpuPercent",
+          "memoryMB",
+          "diskMB",
+          "connections",
+          "queryCount",
+          "isHealthy",
+          "lastCheck",
+          "errorMessage"
+        ],
+        "indexes": ["by_projectId", "by_serviceName", "by_timestamp"]
+      },
+      {
+        "name": "services",
+        "description": "Project services",
+        "fields": [
+          "projectId",
+          "name",
+          "type",
+          "status",
+          "url",
+          "port",
+          "containerId",
+          "lastHealthCheck",
+          "createdAt"
+        ],
+        "indexes": ["by_projectId", "by_status"]
+      },
+      {
+        "name": "notifications",
+        "description": "Project notifications",
+        "fields": [
+          "projectId",
+          "type",
+          "severity",
+          "title",
+          "message",
+          "read",
+          "createdAt",
+          "channel"
+        ],
+        "indexes": ["by_projectId", "by_read", "by_createdAt"]
+      },
+      {
+        "name": "custom_domains",
+        "description": "Custom domain configurations",
+        "fields": [
+          "projectId",
+          "domain",
+          "status",
+          "sslStatus",
+          "sslExpiry",
+          "cnameTarget",
+          "txtRecord",
+          "fileToken",
+          "serviceName",
+          "verifiedAt",
+          "createdAt"
+        ],
+        "indexes": ["by_projectId", "by_domain"]
+      },
+      {
+        "name": "notification_preferences",
+        "description": "User notification preferences",
+        "fields": [
+          "userKey",
+          "projectId",
+          "channels",
+          "emailEnabled",
+          "slackEnabled",
+          "pushEnabled",
+          "severityFilters",
+          "minSeverity",
+          "createdAt",
+          "updatedAt"
+        ],
+        "indexes": ["by_userKey", "by_userKey_projectId"]
+      },
+      {
+        "name": "operator_profiles",
+        "description": "Operator user profiles",
+        "fields": ["userKey", "name", "email", "createdAt", "updatedAt"],
+        "indexes": ["by_userKey"]
+      },
+      {
+        "name": "push_subscriptions",
+        "description": "Web push subscriptions",
+        "fields": [
+          "userKey",
+          "projectId",
+          "endpoint",
+          "keys",
+          "createdAt",
+          "updatedAt"
+        ],
+        "indexes": ["by_userKey", "by_userKey_projectId", "by_endpoint"]
+      },
+      {
+        "name": "commit_cache",
+        "description": "Cached GitHub commits",
+        "fields": ["projectId", "commits", "cachedAt"],
+        "indexes": ["by_projectId"]
+      },
+      {
+        "name": "milestones",
+        "description": "Project milestones",
+        "fields": [
+          "projectId",
+          "title",
+          "description",
+          "phase",
+          "date",
+          "commitSha",
+          "createdAt"
+        ],
+        "indexes": ["by_projectId"]
+      },
+      {
+        "name": "access_code_attempts",
+        "description": "Rate limiting for access codes",
+        "fields": ["accessCode", "success", "ipAddress", "userAgent", "timestamp"],
+        "indexes": ["by_accessCode", "by_timestamp"]
+      },
+      {
+        "name": "ai_rate_limits",
+        "description": "AI rate limits for milestone generation",
+        "fields": ["projectId", "count", "windowStart"],
+        "indexes": ["by_projectId"]
+      }
+    ]
+  },
+  "frontend": {
+    "pages": [
+      {
+        "path": "/",
+        "component": "Dashboard",
+        "description": "Ana sayfa - Proje özeti ve istatistikler"
+      },
+      {
+        "path": "/projects",
+        "component": "Projects",
+        "description": "Proje listesi ve yönetimi"
+      },
+      {
+        "path": "/projects/:id",
+        "component": "ProjectDetail",
+        "description": "Proje detay sayfası - Tüm sekmeler"
+      },
+      {
+        "path": "/customers",
+        "component": "CustomerPage",
+        "description": "Müşteri yönetimi"
+      },
+      {
+        "path": "/analytics",
+        "component": "Analytics",
+        "description": "Analitik ve raporlar"
+      },
+      {
+        "path": "/reports",
+        "component": "Reports",
+        "description": "Raporlama"
+      },
+      {
+        "path": "/service-status",
+        "component": "ServiceStatus",
+        "description": "Servis durumu sayfası"
+      },
+      {
+        "path": "/admin",
+        "component": "Admin",
+        "description": "Yönetici ayarları"
+      },
+      {
+        "path": "/settings",
+        "component": "Settings",
+        "description": "Kullanıcı ayarları"
+      },
+      {
+        "path": "/oauth-callback",
+        "component": "OAuthCallback",
+        "description": "OAuth geri çağırma"
+      }
+    ],
+    "components": {
+      "deployment": [
+        "GitHubRepoConnector",
+        "DeploymentPanel",
+        "DeploymentLogViewer",
+        "VersionHistory",
+        "LivePreview",
+        "CustomDomainManager",
+        "EnvVarManager",
+        "ContainerManager",
+        "SubdomainManager"
+      ],
+      "services": ["ServicesList"],
+      "abtest": ["ABTestDashboard"],
+      "tasks": ["TasksList"]
+    },
+    "tabs": {
+      "ProjectDetail": [
+        {
+          "key": "deploy",
+          "label": "Dağıtım",
+          "icon": "Rocket"
+        },
+        {
+          "key": "logs",
+          "label": "Loglar",
+          "icon": "Terminal"
+        },
+        {
+          "key": "versions",
+          "label": "Versiyonlar",
+          "icon": "History"
+        },
+        {
+          "key": "preview",
+          "label": "Önizleme",
+          "icon": "Monitor"
+        },
+        {
+          "key": "domains",
+          "label": "Domainler",
+          "icon": "Globe"
+        },
+        {
+          "key": "envvars",
+          "label": "Env Değişkenleri",
+          "icon": "KeyRound"
+        },
+        {
+          "key": "containers",
+          "label": "Konteynerler",
+          "icon": "Container"
+        },
+        {
+          "key": "abtests",
+          "label": "A/B Testleri",
+          "icon": "Split"
+        },
+        {
+          "key": "services",
+          "label": "Servisler",
+          "icon": "Server"
+        },
+        {
+          "key": "tasks",
+          "label": "Gorevler",
+          "icon": "ListChecks"
+        }
+      ]
+    }
+  },
+  "stack": {
+    "frontend": {
+      "framework": "React 18 + TypeScript",
+      "build": "Vite",
+      "styling": "Tailwind CSS",
+      "animations": "Framer Motion",
+      "icons": "Lucide React"
+    },
+    "backend": {
+      "database": "Convex",
+      "api": "Express.js",
+      "queue": "BullMQ + Redis",
+      "container": "Docker + Dockerode",
+      "proxy": "Traefik",
+      "ssl": "Let's Encrypt"
+    },
+    "infrastructure": {
+      "redis": {
+        "port": 6379
+      },
+      "registry": {
+        "port": 5000
+      },
+      "traefik": {
+        "dashboard": 8080,
+        "entryPoints": ["web", "websecure"]
+      },
+      "convex": {
+        "defaultPort": 3210
+      }
+    }
+  },
+  "configuration": {
+    "environment": {
+      "required": [
+        "VITE_CONVEX_URL",
+        "VITE_PAAS_SERVER_URL",
+        "GITHUB_CLIENT_ID",
+        "GITHUB_CLIENT_SECRET",
+        "PAAS_JWT_SECRET",
+        "REDIS_HOST",
+        "PAAS_BASE_DOMAIN"
+      ],
+      "optional": [
+        "LETSENCRYPT_EMAIL",
+        "ACME_DNS_PROVIDER",
+        "ACME_DNS_API_TOKEN",
+        "ALERT_WEBHOOK_URL"
+      ]
+    }
+  }
+}
